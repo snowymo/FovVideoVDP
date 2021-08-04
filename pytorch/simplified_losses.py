@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 from fvvdp_display_model import fvvdp_display_photo_gog
 from hdrvdp_lpyr_dec import hdrvdp_lpyr_dec
+from hdrvdp_lpyr_dec_fast import hdrvdp_lpyr_dec_fast
 
 
 def tf_log(X):    
@@ -47,7 +48,7 @@ class ms_log_loss:
             loss = 0
             for kk in range(len(B_bands)):
                 loss += F.mse_loss(B_bands[kk][0,:,:,:], B_bands[kk][1,:,:,:])
-                                
+
             return  loss
 
 
