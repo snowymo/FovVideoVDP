@@ -271,7 +271,7 @@ if __name__ == '__main__':
         [71, 72, 73, 74, 75, 76, 77, 78],
         ], dtype=torch.float32, device=device)
 
-    image = image.repeat((256, 256))
+    image = image.repeat((16, 16))
     # image = torch.cat((image, image, image), axis = -1)
     # image = torch.cat((image, image, image), axis = -2)
 
