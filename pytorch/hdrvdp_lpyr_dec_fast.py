@@ -185,7 +185,8 @@ class hdrvdp_lpyr_dec_fast():
 
         K_vert, K_horiz = self.get_kernels( x, kernel_a )
 
-        y_a = Func.conv2d(x, K_vert, stride=(2,1), padding=(2,0))
+        B, C, H, W = x.shape
+        y_a = Func.conv2d(x.view(-1,1,H,W), K_vert, stride=(2,1), padding=(2,0)).view(B,C,-1,W)
 
         # Symmetric padding 
         y_a[:,:,0,:] += x[:,:,0,:]*K_vert[0,0,1,0] + x[:,:,1,:]*K_vert[0,0,0,0]
@@ -194,7 +195,8 @@ class hdrvdp_lpyr_dec_fast():
         else: # even number of rows
             y_a[:,:,-1,:] += x[:,:,-1,:]*K_vert[0,0,4,0]
 
-        y   = Func.conv2d(y_a, K_horiz, stride=(1,2), padding=(0,2))        
+        H = y_a.shape[-2]
+        y = Func.conv2d(y_a.view(-1,1,H,W), K_horiz, stride=(1,2), padding=(0,2)).view(B,C,H,-1)
 
         # Symmetric padding 
         y[:,:,:,0] += y_a[:,:,:,0]*K_horiz[0,0,0,1] + y_a[:,:,:,1]*K_horiz[0,0,0,0]
@@ -214,18 +216,22 @@ class hdrvdp_lpyr_dec_fast():
 
             return torch.cat((beg, x, end), axis)
 
-    # This function is (a bit) faster at inference, but slows down backpropagation
-    def gausspyr_expand_fast_fw(self, x, sz = None, kernel_a = 0.4):
+    # This function is (a bit) faster
+    def gausspyr_expand(self, x, sz = None, kernel_a = 0.4):
         if sz is None:
             sz = [x.shape[-2]*2, x.shape[-1]*2]
 
         K_vert, K_horiz = self.get_kernels( x, kernel_a )
 
         y_a = self.interleave_zeros_and_pad(x, dim=-2, exp_size=sz)
-        y_a = Func.conv2d(y_a, K_vert*2)
+
+        B, C, H, W = y_a.shape
+        y_a = Func.conv2d(y_a.view(-1,1,H,W), K_vert*2).view(B,C,-1,W)
 
         y   = self.interleave_zeros_and_pad(y_a, dim=-1, exp_size=sz)
-        y   = Func.conv2d(y, K_horiz*2)
+        B, C, H, W = y.shape
+
+        y   = Func.conv2d(y.view(-1,1,H,W), K_horiz*2).view(B,C,H,-1)
 
         return y
 
@@ -236,7 +242,7 @@ class hdrvdp_lpyr_dec_fast():
         elif dim==3:
             return torch.cat([x.permute(0,1,3,2),z.permute(0,1,3,2)],dim=3).view(x.shape[0], x.shape[1], 2*x.shape[3],x.shape[2]).permute(0,1,3,2)
 
-    def gausspyr_expand(self, x, sz = None, kernel_a = 0.4):
+    def gausspyr_expand_slow(self, x, sz = None, kernel_a = 0.4):
         if sz is None:
             sz = [x.shape[-2]*2, x.shape[-1]*2]
 
